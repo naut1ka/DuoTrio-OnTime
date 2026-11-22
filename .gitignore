@@ -1,0 +1,6 @@
+.env
+__pycache__/
+*.sqlite3*
+# Materi kelas, makalah internal, dan arsip praktikum disimpan lokal.
+/docs/
+/archive/

@@ -1,0 +1,1657 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "OnTime API",
+    "version": "1.0.0",
+    "description": "Coordinate arrays are [latitude, longitude]. Use Asia/Jakarta for local schedules. One API key per partner group. Login tokens expire in 24 hours."
+  },
+  "servers": [
+    {
+      "url": "/api"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "Slot": {
+        "type": "object",
+        "properties": {
+          "departure": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationMinutes": {
+            "type": "integer"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "collective",
+              "osrm"
+            ]
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "weatherAvailable": {
+            "type": "boolean"
+          },
+          "meetsTarget": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "departure",
+          "durationMinutes",
+          "source",
+          "confidence",
+          "weatherAvailable",
+          "meetsTarget"
+        ]
+      },
+      "FavoriteInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "location"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "example": "Kos"
+          },
+          "location": {
+            "type": "array",
+            "description": "[latitude, longitude]",
+            "minItems": 2,
+            "maxItems": 2,
+            "prefixItems": [
+              {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              }
+            ],
+            "example": [
+              -6.8893,
+              107.6101
+            ]
+          }
+        }
+      },
+      "Favorite": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/FavoriteInput"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "PartnerKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "service": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "service"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Request failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Request failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Request failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string",
+                    "maxLength": 256,
+                    "minLength": 8
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "expiresIn": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "token",
+                    "expiresIn"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Request failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string",
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans": {
+      "get": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "allOf": [
+                          {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "origin": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "number"
+                                    },
+                                    "minItems": 2,
+                                    "maxItems": 2,
+                                    "description": "[lat, lon]"
+                                  },
+                                  "destination": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "number"
+                                    },
+                                    "minItems": 2,
+                                    "maxItems": 2,
+                                    "description": "[lat, lon]"
+                                  },
+                                  "vehicle": {
+                                    "type": "string",
+                                    "enum": [
+                                      "car",
+                                      "motorcycle"
+                                    ]
+                                  },
+                                  "kind": {
+                                    "const": "once"
+                                  },
+                                  "targetArrival": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  }
+                                },
+                                "required": [
+                                  "origin",
+                                  "destination",
+                                  "vehicle",
+                                  "kind",
+                                  "targetArrival"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "origin": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "number"
+                                    },
+                                    "minItems": 2,
+                                    "maxItems": 2,
+                                    "description": "[lat, lon]"
+                                  },
+                                  "destination": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "number"
+                                    },
+                                    "minItems": 2,
+                                    "maxItems": 2,
+                                    "description": "[lat, lon]"
+                                  },
+                                  "vehicle": {
+                                    "type": "string",
+                                    "enum": [
+                                      "car",
+                                      "motorcycle"
+                                    ]
+                                  },
+                                  "kind": {
+                                    "const": "routine"
+                                  },
+                                  "weekdays": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "arrivalTime": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "origin",
+                                  "destination",
+                                  "vehicle",
+                                  "kind",
+                                  "weekdays",
+                                  "arrivalTime"
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "id"
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Request failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "origin": {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              },
+                              "minItems": 2,
+                              "maxItems": 2,
+                              "description": "[lat, lon]"
+                            },
+                            "destination": {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              },
+                              "minItems": 2,
+                              "maxItems": 2,
+                              "description": "[lat, lon]"
+                            },
+                            "vehicle": {
+                              "type": "string",
+                              "enum": [
+                                "car",
+                                "motorcycle"
+                              ]
+                            },
+                            "kind": {
+                              "const": "once"
+                            },
+                            "targetArrival": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "origin",
+                            "destination",
+                            "vehicle",
+                            "kind",
+                            "targetArrival"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "origin": {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              },
+                              "minItems": 2,
+                              "maxItems": 2,
+                              "description": "[lat, lon]"
+                            },
+                            "destination": {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              },
+                              "minItems": 2,
+                              "maxItems": 2,
+                              "description": "[lat, lon]"
+                            },
+                            "vehicle": {
+                              "type": "string",
+                              "enum": [
+                                "car",
+                                "motorcycle"
+                              ]
+                            },
+                            "kind": {
+                              "const": "routine"
+                            },
+                            "weekdays": {
+                              "type": "array",
+                              "items": {
+                                "type": "integer"
+                              }
+                            },
+                            "arrivalTime": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "origin",
+                            "destination",
+                            "vehicle",
+                            "kind",
+                            "weekdays",
+                            "arrivalTime"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "id"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Request failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "origin": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "description": "[lat, lon]"
+                      },
+                      "destination": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "description": "[lat, lon]"
+                      },
+                      "vehicle": {
+                        "type": "string",
+                        "enum": [
+                          "car",
+                          "motorcycle"
+                        ]
+                      },
+                      "kind": {
+                        "const": "once"
+                      },
+                      "targetArrival": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "origin",
+                      "destination",
+                      "vehicle",
+                      "kind",
+                      "targetArrival"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "origin": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "description": "[lat, lon]"
+                      },
+                      "destination": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "description": "[lat, lon]"
+                      },
+                      "vehicle": {
+                        "type": "string",
+                        "enum": [
+                          "car",
+                          "motorcycle"
+                        ]
+                      },
+                      "kind": {
+                        "const": "routine"
+                      },
+                      "weekdays": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer"
+                        }
+                      },
+                      "arrivalTime": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "origin",
+                      "destination",
+                      "vehicle",
+                      "kind",
+                      "weekdays",
+                      "arrivalTime"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans/{id}": {
+      "put": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Request failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "origin": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "description": "[lat, lon]"
+                      },
+                      "destination": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "description": "[lat, lon]"
+                      },
+                      "vehicle": {
+                        "type": "string",
+                        "enum": [
+                          "car",
+                          "motorcycle"
+                        ]
+                      },
+                      "kind": {
+                        "const": "once"
+                      },
+                      "targetArrival": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "origin",
+                      "destination",
+                      "vehicle",
+                      "kind",
+                      "targetArrival"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "origin": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "description": "[lat, lon]"
+                      },
+                      "destination": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "description": "[lat, lon]"
+                      },
+                      "vehicle": {
+                        "type": "string",
+                        "enum": [
+                          "car",
+                          "motorcycle"
+                        ]
+                      },
+                      "kind": {
+                        "const": "routine"
+                      },
+                      "weekdays": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer"
+                        }
+                      },
+                      "arrivalTime": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "origin",
+                      "destination",
+                      "vehicle",
+                      "kind",
+                      "weekdays",
+                      "arrivalTime"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      },
+      "delete": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Request failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/trips/start": {
+      "post": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An active trip already exists. The ID can be used to finish it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "error",
+                    "id"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Request failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "origin": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "[lat, lon]"
+                  },
+                  "destination": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "[lat, lon]"
+                  },
+                  "vehicle": {
+                    "type": "string",
+                    "enum": [
+                      "car",
+                      "motorcycle"
+                    ]
+                  }
+                },
+                "required": [
+                  "origin",
+                  "destination",
+                  "vehicle"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trips/{id}/finish": {
+      "post": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "durationSeconds": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "durationSeconds"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Request failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "description": "Repeatable. Server timestamps determine actual duration."
+      }
+    },
+    "/conditions": {
+      "post": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Request failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "location": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "[lat, lon]"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "traffic",
+                      "flood"
+                    ]
+                  }
+                },
+                "required": [
+                  "location",
+                  "kind"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "security": [
+          {
+            "Bearer": []
+          },
+          {
+            "PartnerKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "lat": {
+                            "type": "number"
+                          },
+                          "lon": {
+                            "type": "number"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "expires": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "lat",
+                          "lon",
+                          "kind",
+                          "expires"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Request failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "description": "Active reports within 0.01 degrees of the query point. expires is Unix time in seconds."
+      }
+    },
+    "/predict": {
+      "post": {
+        "security": [
+          {
+            "Bearer": []
+          },
+          {
+            "PartnerKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "targetArrival": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "slots": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Slot"
+                      }
+                    },
+                    "latestSafe": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/components/schemas/Slot"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "fastest": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/components/schemas/Slot"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "bufferMinutes": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "targetArrival",
+                    "slots",
+                    "latestSafe",
+                    "fastest",
+                    "bufferMinutes"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Request failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "origin": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "[lat, lon]"
+                  },
+                  "destination": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "[lat, lon]"
+                  },
+                  "vehicle": {
+                    "type": "string",
+                    "enum": [
+                      "car",
+                      "motorcycle"
+                    ]
+                  },
+                  "targetArrival": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "origin",
+                  "destination",
+                  "vehicle",
+                  "targetArrival"
+                ]
+              },
+              "example": {
+                "origin": [
+                  -6.88,
+                  107.62
+                ],
+                "destination": [
+                  -6.89,
+                  107.61
+                ],
+                "vehicle": "motorcycle",
+                "targetArrival": "2026-11-27T07:00:00+07:00"
+              }
+            }
+          }
+        },
+        "description": "Evaluate future WIB quarter-hour slots in the three hours before targetArrival. Target must be within seven days. Times include UTC offset. latestSafe and fastest are null if no evaluated slot meets the target with five minutes of margin. Missing OSRM data can omit slots."
+      }
+    },
+    "/reminders/device": {
+      "put": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Request failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "token"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Request failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/favorites": {
+      "get": {
+        "summary": "List the signed-in user\u2019s favorites",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Favorite places",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Favorite"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Valid Bearer token required"
+          }
+        }
+      },
+      "post": {
+        "summary": "Save a favorite place",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Favorite created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Favorite"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Valid Bearer token required"
+          },
+          "400": {
+            "description": "Invalid name or location"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FavoriteInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/favorites/{id}": {
+      "put": {
+        "summary": "Replace the name and coordinates of a favorite",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Favorite updated"
+          },
+          "401": {
+            "description": "Valid Bearer token required"
+          },
+          "400": {
+            "description": "Invalid name or location"
+          },
+          "404": {
+            "description": "Favorite not found for this account"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FavoriteInput"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Remove a favorite",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Favorite deleted"
+          },
+          "401": {
+            "description": "Valid Bearer token required"
+          },
+          "404": {
+            "description": "Favorite not found for this account"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

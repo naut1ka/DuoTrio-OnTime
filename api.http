@@ -1,0 +1,92 @@
+@base = http://127.0.0.1:8080/api
+@email = demo@example.org
+@password = change-this-demo-password
+@partnerKey = replace-with-partner-key
+
+### Health
+GET {{base}}/health
+
+### Register once
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{"email":"{{email}}","password":"{{password}}"}
+
+### Login
+# @name login
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{"email":"{{email}}","password":"{{password}}"}
+
+### Save routine
+POST {{base}}/plans
+Authorization: Bearer {{login.response.body.$.token}}
+Content-Type: application/json
+
+{"kind":"routine","origin":[-6.88,107.62],"destination":[-6.89,107.61],"vehicle":"motorcycle","weekdays":[1,2,3,4,5],"arrivalTime":"07:00"}
+
+### Save favorite
+# @name favorite
+POST {{base}}/favorites
+Authorization: Bearer {{login.response.body.$.token}}
+Content-Type: application/json
+
+{"name":"Kos","location":[-6.88,107.62]}
+
+### List my favorites
+GET {{base}}/favorites
+Authorization: Bearer {{login.response.body.$.token}}
+
+### Save routine using a favorite as origin
+POST {{base}}/plans
+Authorization: Bearer {{login.response.body.$.token}}
+Content-Type: application/json
+
+{"kind":"routine","origin":[{{favorite.response.body.$.location[0]}},{{favorite.response.body.$.location[1]}}],"destination":[-6.89,107.61],"vehicle":"motorcycle","weekdays":[1,2,3,4,5],"arrivalTime":"07:00"}
+
+### Update favorite
+PUT {{base}}/favorites/{{favorite.response.body.$.id}}
+Authorization: Bearer {{login.response.body.$.token}}
+Content-Type: application/json
+
+{"name":"Kos baru","location":[-6.90,107.63]}
+
+### Delete favorite
+DELETE {{base}}/favorites/{{favorite.response.body.$.id}}
+Authorization: Bearer {{login.response.body.$.token}}
+
+### Start (201 starts a trip, 409 returns the existing active trip ID)
+# @name trip
+POST {{base}}/trips/start
+Authorization: Bearer {{login.response.body.$.token}}
+Content-Type: application/json
+
+{"origin":[-6.88,107.62],"destination":[-6.89,107.61],"vehicle":"motorcycle"}
+
+### Finish
+POST {{base}}/trips/{{trip.response.body.$.id}}/finish
+Authorization: Bearer {{login.response.body.$.token}}
+
+### Predict for tomorrow (VS Code REST Client dynamic ISO timestamp)
+POST {{base}}/predict
+Authorization: Bearer {{login.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "origin": [
+    -6.88,
+    107.62
+  ],
+  "destination": [
+    -6.89,
+    107.61
+  ],
+  "vehicle": "motorcycle",
+  "targetArrival": "2026-11-23T07:00:00+07:00"
+}
+
+### Partner conditions
+GET {{base}}/conditions?lat=-6.88&lon=107.62
+X-API-Key: {{partnerKey}}
+
